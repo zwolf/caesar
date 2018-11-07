@@ -44,19 +44,19 @@ class ExtractFilter
     filters.call(extracts)[0].flat_map(&:extracts)
   end
 
-  def filter_by_repeatedness(extracts)
+  def filter_by_repeatedness(extract_groups)
     case repeated_classifications
     when "keep_all"
-      [extracts]
+      [extract_groups]
     when "keep_first"
-      [keep_first_classification(extracts)]
+      [keep_first_classification(extract_groups)]
     when "keep_last"
-      [keep_first_classification(extracts.reverse).reverse]
+      [keep_first_classification(extract_groups.reverse).reverse]
     end
   end
 
-  def filter_by_subrange(extracts)
-    [extracts.select do |extract_group|
+  def filter_by_subrange(extract_groups)
+    [extract_groups.select do |extract_group|
       extract_group.extracts.length > 0
     end.sort_by(&:classification_at)[subrange]]
   end
@@ -85,7 +85,7 @@ class ExtractFilter
   end
 
   def filter_by_extractor_keys(extract_groups)
-    return [extracts] if extractor_keys.blank?
+    return [extract_groups] if extractor_keys.blank?
 
     [extract_groups.map do |group|
       group.select do |extract|
@@ -94,12 +94,12 @@ class ExtractFilter
     end]
   end
 
-  def filter_by_emptiness(extracts)
+  def filter_by_emptiness(extract_groups)
     case empty_extracts
     when "keep_all"
-      [extracts]
+      [extract_groups]
     when "ignore_empty"
-      [extracts.map do |extract_group|
+      [extract_groups.map do |extract_group|
         extract_group.select { |extract| extract.data.present? }
       end]
     end
