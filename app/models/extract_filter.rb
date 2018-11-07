@@ -26,6 +26,7 @@ class ExtractFilter
       :filter_by_repeatedness,
       :filter_by_extractor_keys,
       :filter_by_emptiness,
+      :filter_by_training_behavior,
       :filter_by_subrange
     ]
 
@@ -58,6 +59,29 @@ class ExtractFilter
     [extracts.select do |extract_group|
       extract_group.extracts.length > 0
     end.sort_by(&:classification_at)[subrange]]
+  end
+
+  def filter_by_training_behavior(extracts)
+    case training_behavior
+    when "ignore_training"
+      [extracts]
+    when "training_only"
+      [extracts.each do |extract_group|
+        extract_group.extracts.select! do |extract|
+          extract.subject.training_subject?
+        end
+      end.select do |extract_group|
+        extract_group.extracts.length > 0
+      end] # remove extracts for non-training subjects
+    when "experiment_only"
+      [extracts.each do |extract_group|
+        extract_group.extracts.reject! do |extract|
+          extract.subject.training_subject?
+        end
+      end.select do |extract_group|
+        extract_group.extracts.length > 0
+      end] # remove extracts for training subjects
+    end
   end
 
   def filter_by_extractor_keys(extracts)
