@@ -55,6 +55,7 @@ gem 'ranked-model'
 gem 'deferred_associations'
 gem 'aws-sdk-s3'
 gem 'aws-sdk-sqs'
+gem 'facets', require: false
 
 # Use Capistrano for deployment
 # gem 'capistrano-rails', group: :development
