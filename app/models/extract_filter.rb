@@ -30,8 +30,8 @@ class ExtractFilter
       :filter_by_subrange
     ]
 
-    composed = compose_filters(filter_sequence)
-    apply_filters(extracts, composed)
+    filters = compose_filters(filter_sequence)
+    apply_filters(extracts, filters)
   end
 
   private
@@ -61,12 +61,12 @@ class ExtractFilter
     end.sort_by(&:classification_at)[subrange]]
   end
 
-  def filter_by_training_behavior(extracts)
+  def filter_by_training_behavior(extract_groups)
     case training_behavior
     when "ignore_training"
-      [extracts]
+      [extract_groups]
     when "training_only"
-      [extracts.each do |extract_group|
+      [extract_groups.each do |extract_group|
         extract_group.extracts.select! do |extract|
           extract.subject.training_subject?
         end
@@ -74,7 +74,7 @@ class ExtractFilter
         extract_group.extracts.length > 0
       end] # remove extracts for non-training subjects
     when "experiment_only"
-      [extracts.each do |extract_group|
+      [extract_groups.each do |extract_group|
         extract_group.extracts.reject! do |extract|
           extract.subject.training_subject?
         end
@@ -84,10 +84,10 @@ class ExtractFilter
     end
   end
 
-  def filter_by_extractor_keys(extracts)
+  def filter_by_extractor_keys(extract_groups)
     return [extracts] if extractor_keys.blank?
 
-    [extracts.map do |group|
+    [extract_groups.map do |group|
       group.select do |extract|
         extractor_keys.include?(extract.extractor_key)
       end
