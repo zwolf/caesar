@@ -1,16 +1,16 @@
 class ExtractFilter
   include ActiveModel::Validations
 
-  REPEATED_CLASSIFICATIONS = ["keep_first", "keep_last", "keep_all"]
-  EMPTY_EXTRACTS = ["keep_all", "ignore_empty"]
-  TRAINING_BEHAVIOR = ["ignore_training", "training_only", "experiment_only"]
+  REPEATED_CLASSIFICATIONS = ["keep_first", "keep_last", "keep_all"].freeze
+  EMPTY_EXTRACTS = ["keep_all", "ignore_empty"].freeze
+  TRAINING_BEHAVIOR = ["ignore_training", "training_only", "experiment_only"].freeze
   FILTER_SEQUENCE = [
       :filter_by_repeatedness,
       :filter_by_extractor_keys,
       :filter_by_emptiness,
       :filter_by_training_behavior,
       :filter_by_subrange
-  ]
+  ].freeze
 
   validates :repeated_classifications, inclusion: {in: REPEATED_CLASSIFICATIONS}
   validates :empty_extracts, inclusion: {in: EMPTY_EXTRACTS}
