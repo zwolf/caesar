@@ -1,11 +1,16 @@
-require 'facets/method/composition'
-
 class ExtractFilter
   include ActiveModel::Validations
 
   REPEATED_CLASSIFICATIONS = ["keep_first", "keep_last", "keep_all"]
   EMPTY_EXTRACTS = ["keep_all", "ignore_empty"]
   TRAINING_BEHAVIOR = ["ignore_training", "training_only", "experiment_only"]
+  FILTER_SEQUENCE = [
+      :filter_by_repeatedness,
+      :filter_by_extractor_keys,
+      :filter_by_emptiness,
+      :filter_by_training_behavior,
+      :filter_by_subrange
+  ]
 
   validates :repeated_classifications, inclusion: {in: REPEATED_CLASSIFICATIONS}
   validates :empty_extracts, inclusion: {in: EMPTY_EXTRACTS}
@@ -20,95 +25,85 @@ class ExtractFilter
   end
 
   def filter(extracts)
-    extracts = ExtractsForClassification.from(extracts)
-
-    filter_sequence = [
-      :filter_by_repeatedness,
-      :filter_by_extractor_keys,
-      :filter_by_emptiness,
-      :filter_by_training_behavior,
-      :filter_by_subrange
-    ]
-
-    filters = compose_filters(filter_sequence)
-    apply_filters(extracts, filters)
+    extract_groups = ExtractsForClassification.from(extracts)
+    apply_filters(extract_groups)
   end
 
   private
 
-  def compose_filters(filter_list)
-    filter_list.map{ |s| self.method(s) }.inject{ |rhs, op| rhs ? op * rhs : op }
-  end
-
-  def apply_filters(extracts, filters)
-    filters.call(extracts)[0].flat_map(&:extracts)
+  def apply_filters(extract_groups)
+    filtered = extract_groups
+    FILTER_SEQUENCE.each do |filter_symbol|
+      filtered = send(filter_symbol, filtered)
+    end
+    filtered.flat_map(&:extracts)
   end
 
   def filter_by_repeatedness(extract_groups)
     case repeated_classifications
     when "keep_all"
-      [extract_groups]
+      extract_groups
     when "keep_first"
-      [keep_first_classification(extract_groups)]
+      keep_first_classification(extract_groups)
     when "keep_last"
-      [keep_first_classification(extract_groups.reverse).reverse]
+      keep_first_classification(extract_groups.reverse).reverse
     end
   end
 
   def filter_by_subrange(extract_groups)
-    [extract_groups.select do |extract_group|
+    extract_groups.select do |extract_group|
       extract_group.extracts.length > 0
-    end.sort_by(&:classification_at)[subrange]]
+    end.sort_by(&:classification_at)[subrange]
   end
 
   def filter_by_training_behavior(extract_groups)
     case training_behavior
     when "ignore_training"
-      [extract_groups]
+      extract_groups
     when "training_only"
-      [extract_groups.each do |extract_group|
+      extract_groups.each do |extract_group|
         extract_group.extracts.select! do |extract|
           extract.subject.training_subject?
         end
       end.select do |extract_group|
         extract_group.extracts.length > 0
-      end] # remove extracts for non-training subjects
+      end # remove extracts for non-training subjects
     when "experiment_only"
-      [extract_groups.each do |extract_group|
+      extract_groups.each do |extract_group|
         extract_group.extracts.reject! do |extract|
           extract.subject.training_subject?
         end
       end.select do |extract_group|
         extract_group.extracts.length > 0
-      end] # remove extracts for training subjects
+      end # remove extracts for training subjects
     end
   end
 
   def filter_by_extractor_keys(extract_groups)
-    return [extract_groups] if extractor_keys.blank?
+    return extract_groups if extractor_keys.blank?
 
-    [extract_groups.map do |group|
+    extract_groups.map do |group|
       group.select do |extract|
         extractor_keys.include?(extract.extractor_key)
       end
-    end]
+    end
   end
 
   def filter_by_emptiness(extract_groups)
     case empty_extracts
     when "keep_all"
-      [extract_groups]
+      extract_groups
     when "ignore_empty"
-      [extract_groups.map do |extract_group|
+      extract_groups.map do |extract_group|
         extract_group.select { |extract| extract.data.present? }
-      end]
+      end
     end
   end
 
-  def keep_first_classification(extracts)
+  def keep_first_classification(extract_groups)
     subjects ||= Hash.new
 
-    extracts.select do |extracts_for_classification|
+    extract_groups.select do |extracts_for_classification|
       subject_id = extracts_for_classification.subject_id
       user_id = extracts_for_classification.user_id
 
