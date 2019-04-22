@@ -12,7 +12,7 @@ class Subject < ApplicationRecord
     subject = panoptes_api.subject_in_project? subject_id, project_id
 
     if !subject.blank?
-      Subject.create id: subject_id.to_i, metadata: subject['metadata']
+      Subject.create id: subject_id.to_i, metadata: subject['metadata'], external_id: subject['external_id']
     end
   end
 
